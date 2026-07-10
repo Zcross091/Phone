@@ -1,2 +1,52 @@
-- name: Android Emulator Runner
-  uses: ReactiveCircus/android-emulator-runner@v2.38.0
+name: Launch Temporary Cloud Phone
+
+on:
+  workflow_dispatch: # Allows you to start the phone manually with a button click
+
+jobs:
+  run-phone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240 # This keeps the VM alive for 4 hours (240 minutes)
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Android ADB Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y adb
+
+    - name: Start Redroid (Android Docker Container)
+      run: |
+        # Load necessary kernel modules for Android
+        sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" || true
+        sudo modprobe ashmem_linux || true
+        
+        # Run Redroid 11
+        docker run -d --rm --privileged \
+          -v ~/data:/data \
+          -p 5555:5555 \
+          redroid/redroid:11.0.0-latest
+
+    - name: Install and Configure Ngrok
+      run: |
+        curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+        sudo apt-get update && sudo apt-get install ngrok
+        ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Create Connection Tunnel
+      run: |
+        # Forward the Android ADB port (5555) to the internet
+        ngrok tcp 5555 --log=stdout &
+        sleep 5
+        
+        # Print the URL you need to connect to
+        curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+
+    - name: Keep Alive for 4 Hours
+      run: |
+        echo "Your cloud phone is ready! Connect using the URL printed above."
+        echo "The workflow will automatically shut down in 4 hours."
+        sleep 14400 # 4 hours in seconds
