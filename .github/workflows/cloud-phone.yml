@@ -1,12 +1,12 @@
-name: Launch Temporary Cloud Phone (Emulator)
+name: Launch Temporary Cloud Phone (Android 8)
 
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Allows you to start the phone manually with a button click
 
 jobs:
   run-phone:
     runs-on: ubuntu-latest
-    timeout-minutes: 240 # Kills the job after 4 hours
+    timeout-minutes: 240 # This keeps the VM alive for 4 hours (240 minutes)
 
     steps:
     - name: Checkout code
@@ -23,10 +23,12 @@ jobs:
     - name: Launch Emulator and Connect Tunnel
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: 30 # Android 11
+        api-level: 27 # Android 8.1 (Oreo) - Lighter and much faster on cloud servers
         target: default
         arch: x86_64
-        profile: Nexus 6 # Optional: Defines screen size and hardware profile
+        profile: Nexus 6
+        ram-size: 3072M # Allocates 3GB of RAM to the emulator
+        emulator-options: -no-window -noaudio -no-boot-anim -camera-back none # Strips out heavy background tasks
         script: |
           echo "Emulator booted successfully!"
           
